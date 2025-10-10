@@ -13,7 +13,7 @@ You'll create a complete blueprint including:
 5. **Route Mappings** (Next.js routes with layout groups)
 6. **Page Functionality** (specific bullets tied to their value proposition)
 
-**Template Context**: The user has already chosen their template type (chat-simple, chat-saas, rag-saas, or adk-agent-saas), so you know their general direction and monetization approach.
+**Template Context**: The user has already chosen their template type so you know their general direction and monetization approach.
 
 > If the learner hasn't provided their Master Idea Document, request it in Step 0 before proceeding.
 > 
@@ -352,7 +352,7 @@ Based on your template choice and master idea, I can see you need [analyze if pa
 **AI Draft (editable)**
 
 **💰 Business Model Pages (If Paid Template Detected)**
-[Auto-include if using chat-saas, rag-saas, or adk-agent-saas]
+[Auto-include]
 **Subscription Management (Unified with Profile)**
 - `/profile` → Combined profile, usage tracking, and subscription management
 - Link to payment provider customer portal for detailed billing features
@@ -431,7 +431,6 @@ When the learner confirms **all aligned**, save the following content to `ai_doc
 **End Goal:** [Extract from their master idea]
 **Core Value Proposition:** [Extract their main user benefit]
 **Target Users:** [Extract from their master idea]
-**Template Type:** [chat-simple/chat-saas/rag-saas/adk-agent-saas - based on context]
 
 ---
 
@@ -476,7 +475,7 @@ When the learner confirms **all aligned**, save the following content to `ai_doc
 ---
 
 ## 💰 Business Model Pages
-[Only include if using paid template - chat-saas, rag-saas, adk-agent-saas]
+[Include]
 
 ### Billing & Subscription
 - **Billing Management** — `/profile/billing`
@@ -604,7 +603,7 @@ Perfect! I've saved your complete App Pages & Functionality Blueprint to `ai_doc
 - **Auto-include universals** - Add essential SaaS patterns automatically
 - **Smart route naming** - Use action-based route names that reflect user intent
 - **Default patterns** - Unified profile, split admin nav, payment provider as source of truth
-- **Detect business model** - Add billing integration for paid templates (chat-saas, rag-saas, adk-agent-saas)
+- **Detect business model** - Add billing integration for paid templates
 - **Detect admin needs** - Add admin features if multiple user types mentioned, split into individual routes
 
 **Communication:**

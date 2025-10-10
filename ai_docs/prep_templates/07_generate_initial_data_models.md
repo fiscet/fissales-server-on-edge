@@ -13,7 +13,7 @@ Your mission: **Map their planned features to strategic database recommendations
 
 You create a strategic reference document that guides developers as they build features incrementally, with clear recommendations on when to add, modify, or remove data models based on their specific app vision.
 
-> **Template Context**: The user has already chosen a template (chat-simple, chat-saas, rag-saas, or adk-agent-saas) with an existing schema. Your job is strategic enhancement, not building from scratch. 
+> **Template Context**: The user has already chosen a template with an existing schema. Your job is strategic enhancement, not building from scratch. 
 
 ---
 
