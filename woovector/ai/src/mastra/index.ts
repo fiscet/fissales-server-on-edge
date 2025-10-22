@@ -8,7 +8,7 @@ import { contextAgent } from './agents/context-agent';
 import { productRecommendationAgent } from './agents/product-recommendation-agent';
 import { productSearchAgent } from './agents/product-search-agent';
 import { orchestratorAgent } from './agents/orchestrator-agent';
-import { storage } from './utils/storage';
+import { storage } from './utils/storage'; // Using Upstash (no bundling issues)
 import { ecommerceFlow } from './workflows/ecommerce-flow';
 
 export const mastra = new Mastra({

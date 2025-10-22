@@ -23,6 +23,12 @@ interface WooCommerceProduct {
   tags?: Array<{ id: number; name: string; slug: string; }>;
 }
 
+interface WooCommerceCategory {
+  id: number;
+  name: string;
+  slug: string;
+}
+
 // Initialize WooCommerce API client
 function getWooCommerceClient() {
   return new WooCommerceRestApi({
@@ -224,7 +230,7 @@ async function syncToQdrant() {
   // Prepare texts for embedding (include category names for better semantic search)
   const textsToEmbed = allProducts.map((product) => {
     const categories = Array.isArray(product.categories)
-      ? product.categories.map((cat: any) => cat.name).join(" ")
+      ? product.categories.map((cat: WooCommerceCategory) => cat.name).join(" ")
       : "";
     return `${product.name} ${product.description || ""} ${product.descriptionExtra || ""} ${categories}`.trim();
   });
@@ -241,11 +247,11 @@ async function syncToQdrant() {
   // Prepare metadata for Qdrant
   const metadata = allProducts.map((product) => {
     const categories = Array.isArray(product.categories) ? product.categories : [];
-    const categoryNames = categories.map((cat: any) => cat.name).join(" ");
+    const categoryNames = categories.map((cat: WooCommerceCategory) => cat.name).join(" ");
 
     // Normalize category names for flexible matching (lowercase, remove special chars)
     const normalizedCategories = categories
-      .map((cat: any) => cat.name.toLowerCase().replace(/[^a-z0-9]/g, ''))
+      .map((cat: WooCommerceCategory) => cat.name.toLowerCase().replace(/[^a-z0-9]/g, ''))
       .join(" ");
 
     return {

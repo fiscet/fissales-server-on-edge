@@ -1,8 +1,7 @@
 import { Memory } from '@mastra/memory';
 import { RuntimeContext } from '@mastra/core/runtime-context';
-import { storage } from './storage.js';
-import { ChatMessage } from '../types/index.js';
-
+import { storage } from './storage';
+import { ChatMessage } from '../types';
 
 export const memory = (runtimeContext: RuntimeContext<Pick<ChatMessage, 'userId' | 'sessionId'>>) => {
   const userId = runtimeContext?.get('userId') || 'anonymous';
