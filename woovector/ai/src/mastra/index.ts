@@ -1,29 +1,34 @@
 
 import { Mastra } from '@mastra/core/mastra';
 import { PinoLogger } from '@mastra/loggers';
-import { LibSQLStore } from '@mastra/libsql';
-import { orchestratorAgent } from './agents/orchestrator-agent';
-import { wooCommerceProductAgent } from './agents/woocommerce-product-agent';
 import { companyInfoAgent } from './agents/company-info-agent';
+import { classifierAgent } from './agents/classifier-agent';
+import { safetyAgent } from './agents/safety-agent';
+import { contextAgent } from './agents/context-agent';
+import { productRecommendationAgent } from './agents/product-recommendation-agent';
+import { productSearchAgent } from './agents/product-search-agent';
+import { orchestratorAgent } from './agents/orchestrator-agent';
+import { storage } from './utils/storage';
+import { ecommerceFlow } from './workflows/ecommerce-flow';
 
 export const mastra = new Mastra({
   agents: {
     orchestratorAgent,
-    wooCommerceProductAgent,
-    companyInfoAgent
+    companyInfoAgent,
+    classifierAgent,
+    safetyAgent,
+    contextAgent,
+    productRecommendationAgent,
+    productSearchAgent
   },
-  storage: new LibSQLStore({
-    // Use persistent storage for conversation memory
-    url: "file:./memory.db",
-  }),
+  workflows: {
+    ecommerceFlow
+  },
+  storage,
   logger: new PinoLogger({
     name: 'WooVector-Mastra',
-    level: 'info',
+    level: 'info'
   }),
-  telemetry: {
-    // Telemetry is deprecated and will be removed in the Nov 4th release
-    enabled: false,
-  },
   observability: {
     // Enables DefaultExporter and CloudExporter for AI tracing
     default: { enabled: true },

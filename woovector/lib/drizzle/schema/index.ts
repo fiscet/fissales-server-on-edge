@@ -8,3 +8,4 @@ export * from "./contact-submissions";
 export * from "./subscription-plans";
 export * from "./vendor-subscriptions";
 export * from "./vendor-stores";
+export * from "./products";

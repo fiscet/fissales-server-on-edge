@@ -8,6 +8,13 @@
       "when": 1759781478895,
       "tag": "0000_purple_frog_thor",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1760707513993,
+      "tag": "0001_perfect_scarlet_spider",
+      "breakpoints": true
     }
   ]
 }
