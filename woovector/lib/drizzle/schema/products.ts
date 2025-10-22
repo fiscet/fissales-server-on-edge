@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, decimal, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, decimal, integer, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import type { InferSelectModel } from "drizzle-orm";
 
@@ -12,6 +12,7 @@ export const products = pgTable("products", {
   stock: integer("stock").default(0),
   imageUrl: text("image_url"),
   productUrl: text("product_url"),
+  categories: jsonb("categories").$type<Array<{ id: number; name: string; slug: string; }>>().default([]), // WooCommerce categories
 
   // Metadata
   created_at: timestamp("created_at", { withTimezone: true })

@@ -19,6 +19,8 @@ interface WooCommerceProduct {
   stock_quantity?: number;
   images?: Array<{ src?: string; }>;
   permalink?: string;
+  categories?: Array<{ id: number; name: string; slug: string; }>;
+  tags?: Array<{ id: number; name: string; slug: string; }>;
 }
 
 // Initialize WooCommerce API client
@@ -159,6 +161,7 @@ async function importFromWooCommerce() {
         stock: wooProduct.stock_quantity || 0,
         imageUrl: wooProduct.images?.[0]?.src || "",
         productUrl: wooProduct.permalink || "",
+        categories: wooProduct.categories || [],
         updated_at: new Date(),
       };
 
@@ -175,6 +178,7 @@ async function importFromWooCommerce() {
             stock: productData.stock,
             imageUrl: productData.imageUrl,
             productUrl: productData.productUrl,
+            categories: productData.categories,
             updated_at: productData.updated_at,
           },
         });
@@ -217,10 +221,13 @@ async function syncToQdrant() {
 
   console.log(`📦 Found ${allProducts.length} products in Supabase`);
 
-  // Prepare texts for embedding
-  const textsToEmbed = allProducts.map((product) =>
-    `${product.name} ${product.description || ""} ${product.descriptionExtra || ""}`.trim()
-  );
+  // Prepare texts for embedding (include category names for better semantic search)
+  const textsToEmbed = allProducts.map((product) => {
+    const categories = Array.isArray(product.categories)
+      ? product.categories.map((cat: any) => cat.name).join(" ")
+      : "";
+    return `${product.name} ${product.description || ""} ${product.descriptionExtra || ""} ${categories}`.trim();
+  });
 
   // Generate embeddings using OpenAI
   console.log("🧠 Generating embeddings for products...");
@@ -232,17 +239,30 @@ async function syncToQdrant() {
   console.log(`✅ Generated ${embeddings.length} embeddings`);
 
   // Prepare metadata for Qdrant
-  const metadata = allProducts.map((product) => ({
-    id: product.id,
-    name: product.name,
-    description: product.description || "",
-    descriptionExtra: product.descriptionExtra || "",
-    price: parseFloat(product.price || "0"),
-    stock: product.stock || 0,
-    imageUrl: product.imageUrl || "",
-    productUrl: product.productUrl || "",
-    text: `${product.name} ${product.description || ""} ${product.descriptionExtra || ""}`.trim(),
-  }));
+  const metadata = allProducts.map((product) => {
+    const categories = Array.isArray(product.categories) ? product.categories : [];
+    const categoryNames = categories.map((cat: any) => cat.name).join(" ");
+
+    // Normalize category names for flexible matching (lowercase, remove special chars)
+    const normalizedCategories = categories
+      .map((cat: any) => cat.name.toLowerCase().replace(/[^a-z0-9]/g, ''))
+      .join(" ");
+
+    return {
+      id: product.id,
+      name: product.name,
+      description: product.description || "",
+      descriptionExtra: product.descriptionExtra || "",
+      price: parseFloat(product.price || "0"),
+      stock: product.stock || 0,
+      imageUrl: product.imageUrl || "",
+      productUrl: product.productUrl || "",
+      categories: categories, // Store full category objects
+      categoryNames: categoryNames, // Flattened category names (original)
+      categoryNamesNormalized: normalizedCategories, // Normalized for filtering (lowercase, no special chars)
+      text: `${product.name} ${product.description || ""} ${product.descriptionExtra || ""} ${categoryNames}`.trim(),
+    };
+  });
 
   // Upload to Qdrant
   console.log("📤 Uploading products to Qdrant...");

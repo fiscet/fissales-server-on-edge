@@ -1,5 +1,4 @@
 import { openai } from '@ai-sdk/openai';
-import { createVectorQueryTool } from '@mastra/rag';
 import { createTool } from '@mastra/core';
 import { QdrantVector } from '@mastra/qdrant';
 import { z } from 'zod';
@@ -11,92 +10,113 @@ const qdrantVectorStore = new QdrantVector({
   https: true
 });
 
-// SEARCH TOOLS - Structured search with filters (Meta catalog style)
-const baseMetaSearchTool = createVectorQueryTool({
+// ============================================================================
+// PRODUCT SEARCH TOOL - For specific product searches by name
+// ============================================================================
+export const searchProductsOnMeta = createTool({
   id: 'search_products_meta',
-  vectorStoreName: 'qdrant',
-  description:
-    'Searches products on Meta (catalog) by category, price range, and keywords. Use filters for structured search (category, price range). Great for browsing specific categories or price ranges.',
-  vectorStore: qdrantVectorStore,
-  indexName: 'products',
-  model: openai.embedding('text-embedding-3-small'),
-  enableFilter: true, // Enable metadata filtering for category, price, etc.
-  includeSources: true,
-  includeVectors: false
-});
-
-// Wrap the Meta search tool to provide a cleaner interface
-export const searchProductsOnMeta = {
-  ...baseMetaSearchTool,
-  execute: async (input: any, context: any) => {
+  description: 'Searches specific clothing products by name. Use queryText for product name/search term. Returns topK results (default 5).',
+  inputSchema: z.object({
+    queryText: z.string().describe('Product name or search term'),
+    topK: z.number().optional().default(5).describe('Number of results (max 10)'),
+  }),
+  execute: async ({ context }) => {
     try {
-      // The input already contains query and filter from createVectorQueryTool
-      // We can pass it directly or transform it if needed
-      const result = await baseMetaSearchTool.execute(input, context);
+      const { queryText, topK = 5 } = context;
+      const limitedTopK = Math.min(topK, 10);
 
-      // Transform to Meta-style response format
+      console.log('🟡 searchProductsOnMeta CALLED:', queryText);
+
+      // Generate embedding
+      const { embedMany } = await import('ai');
+      const embedResult = await embedMany({
+        model: openai.embedding('text-embedding-3-small'),
+        values: [queryText]
+      });
+
+      // Query Qdrant
+      const results = await qdrantVectorStore.query({
+        indexName: 'products',
+        queryVector: embedResult.embeddings[0],
+        topK: limitedTopK
+      });
+
+      console.log('🟡 searchProductsOnMeta RESULT:', results.length, 'products found');
+
+      // Return only essential fields to avoid token limit
+      const simplifiedResults = results.map((r: any) => ({
+        id: r.metadata?.id,
+        name: r.metadata?.name,
+        price: r.metadata?.price,
+        categories: r.metadata?.categories,
+        imageUrl: r.metadata?.imageUrl,
+        productUrl: r.metadata?.productUrl,
+        stock: r.metadata?.stock
+      }));
+
       return {
-        products: result.results || [],
-        count: result.results?.length || 0,
-        filters_applied: input.filter || {}
+        products: simplifiedResults,
+        count: results.length
       };
     } catch (error) {
-      console.error('Error searching products on Meta:', error);
+      console.error('🔴 searchProductsOnMeta ERROR:', error);
       throw new Error(`Failed to search products: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
-};
-
-// VECTOR DB TOOLS - Semantic Search
-
-// Create the base vector query tool for product search
-const baseProductSearchTool = createVectorQueryTool({
-  id: 'product-search',
-  vectorStoreName: 'qdrant',
-  description:
-    'Finds similar clothing products in VectorDB using semantic similarity. Use queryText parameter for semantic search (e.g., "summer dress", "casual wear", "formal outfit"). Supports optional filters for category, price, color, size. Returns topK results (default 5, max 10).',
-  vectorStore: qdrantVectorStore, // Pass the vector store directly
-  indexName: 'products', // This should match your index name
-  model: openai.embedding('text-embedding-3-small'),
-  enableFilter: true, // Enable metadata filtering
-  includeSources: true, // Include source information
-  includeVectors: false // Don't include vectors in response to save bandwidth
 });
 
-// Wrap the tool with custom logging and parameter validation
-export const searchSimilarProducts = {
-  ...baseProductSearchTool,
-  execute: async (input: any, context: any) => {
+// ============================================================================
+// SIMILAR PRODUCTS TOOL - For recommendations based on semantic similarity
+// ============================================================================
+export const searchSimilarProducts = createTool({
+  id: 'search_similar_products',
+  description: 'Finds similar clothing products using semantic similarity. Great for recommendations based on style, occasion, season.',
+  inputSchema: z.object({
+    queryText: z.string().describe('Semantic search query (e.g., "casual summer outfit", "formal wear")'),
+    topK: z.number().optional().default(5).describe('Number of results (max 10)'),
+  }),
+  execute: async ({ context }) => {
     try {
-      // Validate and set defaults for topK
-      const topK = input.topK ? Math.min(input.topK, 10) : 5; // Default 5, max 10
+      const { queryText, topK = 5 } = context;
+      const limitedTopK = Math.min(topK, 10);
 
-      // Build the params object with validated values
-      const searchParams = {
-        ...input,
-        topK,
+      console.log('🟢 searchSimilarProducts CALLED:', queryText);
+
+      // Generate embedding
+      const { embedMany } = await import('ai');
+      const embedResult = await embedMany({
+        model: openai.embedding('text-embedding-3-small'),
+        values: [queryText]
+      });
+
+      // Query Qdrant
+      const results = await qdrantVectorStore.query({
+        indexName: 'products',
+        queryVector: embedResult.embeddings[0],
+        topK: limitedTopK
+      });
+
+      console.log('🟢 searchSimilarProducts RESULT:', results.length, 'products found');
+
+      // Return only essential fields to avoid token limit
+      const simplifiedResults = results.map((r: any) => ({
+        id: r.metadata?.id,
+        name: r.metadata?.name,
+        price: r.metadata?.price,
+        categories: r.metadata?.categories,
+        imageUrl: r.metadata?.imageUrl,
+        productUrl: r.metadata?.productUrl,
+        stock: r.metadata?.stock,
+        score: r.score
+      }));
+
+      return {
+        results: simplifiedResults,
+        count: results.length
       };
-
-      console.log('🟢 searchSimilarProducts CALLED with params:', {
-        queryText: searchParams.queryText,
-        topK: searchParams.topK,
-        hasFilters: !!searchParams.filter
-      });
-
-      const result = await baseProductSearchTool.execute(searchParams, context);
-
-      console.log('🟢 searchSimilarProducts RESULT:', {
-        resultsCount: result.results?.length || 0,
-        queryText: searchParams.queryText,
-        topK: searchParams.topK,
-        hasFilters: !!searchParams.filter,
-        firstResult: result.results?.[0]?.metadata || 'no results'
-      });
-
-      return result;
     } catch (error) {
       console.error('🔴 searchSimilarProducts ERROR:', error);
       throw error;
     }
   }
-};
+});
