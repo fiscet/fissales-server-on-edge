@@ -17,6 +17,13 @@ export async function updateSession(request: NextRequest) {
     });
   }
 
+  // Skip authentication for products sync endpoint (temporary for data import)
+  if (request.nextUrl.pathname.startsWith("/api/products-sync")) {
+    return NextResponse.next({
+      request,
+    });
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   });
