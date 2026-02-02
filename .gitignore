@@ -1,3 +1,5 @@
 poc/ollama_data
 poc/qdrant_storage
 poc/redis_data
+
+ai_docs

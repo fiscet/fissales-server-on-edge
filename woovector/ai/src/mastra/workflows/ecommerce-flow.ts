@@ -1,4 +1,4 @@
-import { Workflow, createWorkflow } from "@mastra/core";
+import { Step, Workflow, createWorkflow } from "@mastra/core";
 import { customerInputSchema } from "../schemas/customer-input-schema";
 import { customerOutputSchema } from "../schemas/customer-output-schema";
 import { receiveMessageStep } from "../steps/receive-message-step";
@@ -9,13 +9,12 @@ import { productRecommendationStep } from "../steps/product-recommendation-step"
 import { contextStep } from "../steps/context-step";
 import { IntentResult } from "../types";
 import { unsafeResponseStep } from "../steps/unsafe-response-step";
-import { orchestratorStep } from "../steps/orchestrator-step";
 import { z } from "zod";
 
 // Helper function to extract and filter specific intent from classification
 const createIntentFilterWorkflow = (
   intentType: string,
-  step: any,
+  step: Step,
   workflowId: string
 ) => {
   return createWorkflow({
@@ -33,7 +32,6 @@ const createIntentFilterWorkflow = (
         (item: IntentResult) => item.intent === intentType
       );
 
-      // Return the filtered intent as a JSON string to match step's expected input schema
       return {
         classification: JSON.stringify(relevantIntent)
       };
@@ -42,7 +40,6 @@ const createIntentFilterWorkflow = (
     .commit();
 };
 
-// Create filtered workflows for each intent type
 const companyInfoFlow = createIntentFilterWorkflow(
   'company_info',
   companyInfoStep,
@@ -84,7 +81,6 @@ export const ecommerceFlow = new Workflow({
 
     const originalInput = getInitData();
 
-    // If safe, extract the original message; if unsafe, use 'unsafe'
     const messageToClassify = message === 'safe' ? originalInput.message : 'unsafe';
 
     return {
