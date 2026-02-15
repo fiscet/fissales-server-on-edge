@@ -1,16 +1,16 @@
-"use client";
+'use client';
 
-import { useState } from "react";
+import { useState } from 'react';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+  CardTitle
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import {
   CreditCard,
   Calendar,
@@ -20,27 +20,27 @@ import {
   Crown,
   CheckCircle,
   Clock,
-  Loader2,
-} from "lucide-react";
-import { createCustomerPortalSession } from "@/app/actions/subscriptions";
-import { useUsage } from "@/contexts/UsageContext";
-import { formatDate } from "@/lib/utils";
-import type { SubscriptionTier } from "@/lib/subscriptions";
+  Loader2
+} from 'lucide-react';
+import { createCustomerPortalSession } from '@/app/actions/subscriptions';
+import { useUsage } from '@/contexts/UsageContext';
+import { formatDate } from '@/lib/utils';
+import type { SubscriptionTier } from '@/lib/subscriptions';
 
 interface BillingManagementCardProps {
   className?: string;
 }
 
 export function BillingManagementCard({
-  className,
+  className
 }: BillingManagementCardProps) {
   const { usageStats } = useUsage();
 
   // Derive subscription data from usage context
   const subscriptionTier = (usageStats?.subscriptionTier ||
-    "free") as SubscriptionTier;
+    'starter') as SubscriptionTier;
   const currentPeriodStart = usageStats?.billingPeriodStart || null;
-  const currentPeriodEnd = usageStats?.usage.sessions.nextReset || null;
+  const currentPeriodEnd = usageStats?.usage?.conversations?.nextReset || null;
   const cancelAtPeriodEnd = usageStats?.stripeData?.cancelAtPeriodEnd || false;
   const [loading, setLoading] = useState(false);
 
@@ -58,14 +58,14 @@ export function BillingManagementCard({
       // Handle different error cases
       if (result.fallbackUrl) {
         // Open fallback URL if provided (from env variable)
-        window.open(result.fallbackUrl, "_blank");
+        window.open(result.fallbackUrl, '_blank');
         return;
       }
 
       // Show user-friendly error message
-      const errorMessage = result.error || "Unable to open billing portal";
+      const errorMessage = result.error || 'Unable to open billing portal';
 
-      if (result.error?.includes("Customer portal not configured")) {
+      if (result.error?.includes('Customer portal not configured')) {
         alert(
           `${errorMessage}\n\nAs a temporary workaround, you can manage your subscription directly through Stripe at billing.stripe.com.`
         );
@@ -73,8 +73,8 @@ export function BillingManagementCard({
         alert(errorMessage);
       }
     } catch (error) {
-      console.error("Failed to open customer portal:", error);
-      alert("Unable to open billing portal. Please contact support.");
+      console.error('Failed to open customer portal:', error);
+      alert('Unable to open billing portal. Please contact support.');
     } finally {
       setLoading(false);
     }
@@ -82,56 +82,59 @@ export function BillingManagementCard({
 
   const getTierLabel = (tier: SubscriptionTier) => {
     switch (tier) {
-      case "free":
-        return "Free";
-      case "paid":
-        return "Pro";
+      case 'starter':
+        return 'Starter';
+      case 'professional':
+        return 'Professional';
       default:
-        return "Free";
+        return 'Starter';
     }
   };
 
   const getTierColor = (tier: SubscriptionTier) => {
     switch (tier) {
-      case "free":
-        return "bg-gray-500";
-      case "paid":
-        return "bg-primary";
+      case 'starter':
+        return 'bg-gray-500';
+      case 'professional':
+        return 'bg-primary';
       default:
-        return "bg-gray-500";
+        return 'bg-gray-500';
     }
   };
 
   const getPricing = (tier: SubscriptionTier) => {
     switch (tier) {
-      case "paid":
-        return "$9.99/month";
+      case 'starter':
+        return '€29/month';
+      case 'professional':
+        return '€59/month';
       default:
-        return null; // Don't show pricing for free
+        return null;
     }
   };
 
   // Simplified status logic
   const getStatusDisplay = () => {
-    if (subscriptionTier !== "free" && cancelAtPeriodEnd) {
+    if (cancelAtPeriodEnd) {
       return {
         icon: <Clock className="h-4 w-4 text-muted-foreground" />,
-        label: "Cancelling",
-        color: "bg-muted-foreground",
+        label: 'Cancelling',
+        color: 'bg-muted-foreground'
       };
     }
 
-    // Default to active for any non-free tier or free tier
+    // Default to active
     return {
       icon: <CheckCircle className="h-4 w-4 text-primary" />,
-      label: "Active",
-      color: "bg-primary",
+      label: 'Active',
+      color: 'bg-primary'
     };
   };
 
   const statusDisplay = getStatusDisplay();
   const pricing = getPricing(subscriptionTier);
-  const isActiveSubscription = subscriptionTier !== "free";
+  const isActiveSubscription =
+    subscriptionTier === 'starter' || subscriptionTier === 'professional';
   const isCanceled = cancelAtPeriodEnd;
 
   return (
@@ -142,7 +145,7 @@ export function BillingManagementCard({
             <CreditCard className="h-5 w-5" />
             <CardTitle className="text-lg">Billing & Subscription</CardTitle>
           </div>
-          {subscriptionTier === "paid" && (
+          {subscriptionTier === 'professional' && (
             <Crown className="h-5 w-5 text-primary" />
           )}
         </div>
@@ -181,7 +184,7 @@ export function BillingManagementCard({
           </div>
 
           {/* Cancellation Notice */}
-          {isCanceled && subscriptionTier !== "free" && (
+          {isCanceled && isActiveSubscription && (
             <div className="flex items-start gap-2 p-3 border border-destructive/20 dark:border-red-800 bg-destructive/5 dark:bg-red-950/20 rounded-lg">
               <AlertTriangle className="h-4 w-4 text-destructive dark:text-red-300 mt-0.5 flex-shrink-0" />
               <div className="text-sm">
@@ -223,7 +226,7 @@ export function BillingManagementCard({
         {/* Management Actions */}
         <Separator />
         <div className="space-y-3">
-          {subscriptionTier !== "free" ? (
+          {isActiveSubscription ? (
             <div className="space-y-2">
               <Button
                 onClick={handleManageBilling}
@@ -264,8 +267,8 @@ export function BillingManagementCard({
                   );
                   if (plansSection) {
                     plansSection.scrollIntoView({
-                      behavior: "smooth",
-                      block: "start",
+                      behavior: 'smooth',
+                      block: 'start'
                     });
                   }
                 }}
@@ -277,7 +280,7 @@ export function BillingManagementCard({
         </div>
 
         {/* Quick Stats for paid plans */}
-        {subscriptionTier !== "free" && currentPeriodEnd && (
+        {isActiveSubscription && currentPeriodEnd && (
           <div className="grid grid-cols-2 gap-2 text-xs text-center">
             <div className="p-2 bg-muted/50 rounded">
               <p className="font-medium">Next Bill</p>
@@ -287,7 +290,7 @@ export function BillingManagementCard({
             </div>
             <div className="p-2 bg-muted/50 rounded">
               <p className="font-medium">Amount</p>
-              <p className="text-muted-foreground">{pricing || "N/A"}</p>
+              <p className="text-muted-foreground">{pricing || 'N/A'}</p>
             </div>
           </div>
         )}

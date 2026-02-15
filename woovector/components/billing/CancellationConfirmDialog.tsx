@@ -1,28 +1,28 @@
-"use client";
+'use client';
 
-import { useState } from "react";
+import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+  DialogTrigger
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import {
   AlertTriangle,
   CheckCircle,
   Crown,
   Loader2,
   Calendar,
-  CreditCard,
-} from "lucide-react";
-import { createCustomerPortalSession } from "@/app/actions/subscriptions";
-import { formatDate } from "@/lib/utils";
-import type { SubscriptionTier } from "@/lib/subscriptions";
+  CreditCard
+} from 'lucide-react';
+import { createCustomerPortalSession } from '@/app/actions/subscriptions';
+import { formatDate } from '@/lib/utils';
+import type { SubscriptionTier } from '@/lib/subscriptions';
 
 interface CancellationConfirmDialogProps {
   children: React.ReactNode;
@@ -33,7 +33,7 @@ interface CancellationConfirmDialogProps {
 export function CancellationConfirmDialog({
   children,
   subscriptionTier,
-  currentPeriodEnd,
+  currentPeriodEnd
 }: CancellationConfirmDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -44,7 +44,7 @@ export function CancellationConfirmDialog({
       await createCustomerPortalSession();
       setOpen(false);
     } catch (error) {
-      console.error("Failed to open customer portal:", error);
+      console.error('Failed to open customer portal:', error);
     } finally {
       setLoading(false);
     }
@@ -52,37 +52,50 @@ export function CancellationConfirmDialog({
 
   const getTierLabel = (tier: SubscriptionTier) => {
     switch (tier) {
-      case "paid":
-        return "Paid";
+      case 'starter':
+        return 'Starter';
+      case 'professional':
+        return 'Professional';
       default:
-        return "Free";
+        return 'Starter';
     }
   };
 
   const getTierColor = (tier: SubscriptionTier) => {
     switch (tier) {
-      case "paid":
-        return "bg-purple-500";
+      case 'starter':
+        return 'bg-gray-500';
+      case 'professional':
+        return 'bg-purple-500';
       default:
-        return "bg-gray-500";
+        return 'bg-gray-500';
     }
   };
 
   const getFeatureLoss = (tier: SubscriptionTier) => {
     switch (tier) {
-      case "paid":
+      case 'starter':
         return {
-          premiumMessages: "Unlimited → Blocked",
-          standardMessages: "Unlimited → Blocked",
-          support: "Premium → None",
+          conversations: '500 → 0',
+          products: '5,000 → 0',
+          support: 'Email → None'
+        };
+      case 'professional':
+        return {
+          conversations: '2,000 → 0',
+          products: '10,000 → 0',
+          support: 'Priority → None'
         };
       default:
         return null;
     }
   };
 
-  if (subscriptionTier === "free") {
-    return null; // No cancellation dialog needed for free users
+  // Only show for paid subscriptions
+  const hasPaidSubscription =
+    subscriptionTier === 'starter' || subscriptionTier === 'professional';
+  if (!hasPaidSubscription) {
+    return null;
   }
 
   const featureLoss = getFeatureLoss(subscriptionTier);
@@ -97,7 +110,7 @@ export function CancellationConfirmDialog({
             Cancel Subscription?
           </DialogTitle>
           <DialogDescription>
-            You&rsquo;re about to cancel your {getTierLabel(subscriptionTier)}{" "}
+            You&rsquo;re about to cancel your {getTierLabel(subscriptionTier)}{' '}
             subscription. Please review what this means for your account.
           </DialogDescription>
         </DialogHeader>
@@ -110,7 +123,7 @@ export function CancellationConfirmDialog({
               <Badge className={`${getTierColor(subscriptionTier)} text-white`}>
                 {getTierLabel(subscriptionTier)}
               </Badge>
-              {subscriptionTier === "paid" && (
+              {subscriptionTier === 'professional' && (
                 <Crown className="h-4 w-4 text-yellow-500" />
               )}
             </div>
@@ -135,14 +148,14 @@ export function CancellationConfirmDialog({
             </h4>
             <ul className="text-sm space-y-2 text-muted-foreground">
               <li>
-                • You&rsquo;ll keep full access until{" "}
+                • You&rsquo;ll keep full access until{' '}
                 {formatDate(currentPeriodEnd)}
               </li>
               <li>• No more charges will be made to your account</li>
               <li>• You can reactivate anytime before the period ends</li>
               <li>
                 • After {formatDate(currentPeriodEnd)}, you&rsquo;ll
-                automatically switch to the Free plan
+                automatically lose access to your plan features
               </li>
             </ul>
           </div>
@@ -159,18 +172,18 @@ export function CancellationConfirmDialog({
               <div className="text-sm space-y-2">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">
-                    Premium messages per month:
+                    AI conversations per month:
                   </span>
                   <span className="font-medium text-orange-600">
-                    {featureLoss.premiumMessages}
+                    {featureLoss.conversations}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">
-                    Standard messages per month:
+                    WooCommerce products:
                   </span>
                   <span className="font-medium text-orange-600">
-                    {featureLoss.standardMessages}
+                    {featureLoss.products}
                   </span>
                 </div>
                 <div className="flex justify-between">

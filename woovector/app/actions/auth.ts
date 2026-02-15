@@ -1,7 +1,20 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { db } from "@/lib/drizzle/db";
+import { users, verificationTokens } from "@/lib/drizzle/schema";
+import { eq, and, gt } from "drizzle-orm";
+import { randomBytes } from "crypto";
+import {
+  signJWT,
+  hashPassword,
+  verifyPassword,
+  setAuthCookie,
+  clearAuthCookie,
+  sendVerificationEmail,
+  sendPasswordResetEmail,
+  getCurrentUserId,
+} from "@/lib/auth";
 
 // Base auth result type for consistent responses
 export type AuthResult = {
@@ -9,27 +22,74 @@ export type AuthResult = {
   error?: string;
 };
 
+// Token expiration times
+const VERIFICATION_TOKEN_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours
+const PASSWORD_RESET_TOKEN_EXPIRY = 60 * 60 * 1000; // 1 hour
+
+/**
+ * Generate a secure random token
+ */
+function generateToken(): string {
+  return randomBytes(32).toString("hex");
+}
+
 /**
  * Server-side login action
- * Authenticates user with email and password, then redirects to appropriate page
+ * Authenticates user with email and password
  */
 export async function loginAction(
   email: string,
   password: string
 ): Promise<AuthResult> {
-  const supabase = await createClient();
+  try {
+    // Find user by email
+    const userResult = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, email.toLowerCase()))
+      .limit(1);
 
-  const { error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
+    if (userResult.length === 0) {
+      return { success: false, error: "Invalid email or password" };
+    }
 
-  if (error) {
-    return { success: false, error: error.message };
+    const user = userResult[0];
+
+    // Check if user has a password set (might be OAuth user)
+    if (!user.password_hash) {
+      return { success: false, error: "Invalid email or password" };
+    }
+
+    // Verify password
+    const isValidPassword = await verifyPassword(password, user.password_hash);
+    if (!isValidPassword) {
+      return { success: false, error: "Invalid email or password" };
+    }
+
+    // Check if email is verified
+    if (!user.email_verified) {
+      return {
+        success: false,
+        error: "Please verify your email address before logging in",
+      };
+    }
+
+    // Generate JWT and set cookie
+    const token = await signJWT({
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+    });
+
+    console.log("[Login] Setting auth cookie for user:", user.email);
+    await setAuthCookie(token);
+
+    revalidatePath("/", "layout");
+    return { success: true };
+  } catch (error) {
+    console.error("Login error:", error);
+    return { success: false, error: "An unexpected error occurred" };
   }
-
-  revalidatePath("/", "layout");
-  return { success: true };
 }
 
 /**
@@ -41,60 +101,87 @@ export async function signUpAction(
   password: string,
   fullName?: string
 ): Promise<AuthResult> {
-  const supabase = await createClient();
+  try {
+    const normalizedEmail = email.toLowerCase();
 
-  const { error, data } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/profile`,
-      data: {
-        full_name: fullName,
-      },
-    },
-  });
+    // Check if user already exists
+    const existingUser = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, normalizedEmail))
+      .limit(1);
 
-  if (error) {
+    if (existingUser.length > 0) {
+      // Check if user is already verified
+      if (existingUser[0].email_verified) {
+        return {
+          success: false,
+          error: "An account with this email already exists. Try logging in instead.",
+        };
+      }
+      // User exists but not verified - resend verification email
+      const user = existingUser[0];
+      const token = generateToken();
+      const expiresAt = new Date(Date.now() + VERIFICATION_TOKEN_EXPIRY);
+
+      // Delete old verification tokens for this user
+      await db
+        .delete(verificationTokens)
+        .where(
+          and(
+            eq(verificationTokens.user_id, user.id),
+            eq(verificationTokens.type, "email_verification")
+          )
+        );
+
+      // Create new verification token
+      await db.insert(verificationTokens).values({
+        user_id: user.id,
+        token,
+        type: "email_verification",
+        expires_at: expiresAt,
+      });
+
+      // Send verification email
+      await sendVerificationEmail(user.email, token, user.full_name || undefined);
+
+      return { success: true };
+    }
+
+    // Hash password
+    const passwordHash = await hashPassword(password);
+
+    // Create user
+    const [newUser] = await db
+      .insert(users)
+      .values({
+        email: normalizedEmail,
+        password_hash: passwordHash,
+        full_name: fullName || null,
+        email_verified: false,
+        role: "member",
+      })
+      .returning();
+
+    // Generate verification token
+    const token = generateToken();
+    const expiresAt = new Date(Date.now() + VERIFICATION_TOKEN_EXPIRY);
+
+    await db.insert(verificationTokens).values({
+      user_id: newUser.id,
+      token,
+      type: "email_verification",
+      expires_at: expiresAt,
+    });
+
+    // Send verification email
+    await sendVerificationEmail(newUser.email, token, fullName);
+
+    return { success: true };
+  } catch (error) {
     console.error("Signup error:", error);
-    // Provide helpful error messages for common signup issues
-    if (error.message.includes("already registered")) {
-      return {
-        success: false,
-        error:
-          "An account with this email already exists. Try logging in instead.",
-      };
-    }
-
-    return { success: false, error: error.message };
+    return { success: false, error: "An unexpected error occurred" };
   }
-
-  // Check if user already exists and is verified
-  if (data.user && data.user.identities && data.user.identities.length > 0) {
-    const identity = data.user.identities[0];
-    const emailVerified = identity.identity_data?.email_verified;
-
-    console.log("User exists, email verified:", emailVerified);
-
-    if (emailVerified === true) {
-      // User exists and email is already verified - they should log in instead
-      return {
-        success: false,
-        error: "Account already exists and is verified. Please log in instead.",
-      };
-    }
-
-    // If emailVerified is false, this means user exists but hasn't verified email yet
-    // This is fine - they can receive another confirmation email
-  } else {
-    // This means that the user already verified their email
-    return {
-      success: false,
-      error: "Account already exists. Please log in instead.",
-    };
-  }
-
-  // If no error, signup was successful - user needs to check email for verification
-  return { success: true };
 }
 
 /**
@@ -102,16 +189,14 @@ export async function signUpAction(
  * Terminates user session
  */
 export async function logoutAction(): Promise<AuthResult> {
-  const supabase = await createClient();
-
-  const { error } = await supabase.auth.signOut();
-
-  if (error) {
-    return { success: false, error: error.message };
+  try {
+    await clearAuthCookie();
+    revalidatePath("/", "layout");
+    return { success: true };
+  } catch (error) {
+    console.error("Logout error:", error);
+    return { success: false, error: "An unexpected error occurred" };
   }
-
-  revalidatePath("/", "layout");
-  return { success: true };
 }
 
 /**
@@ -119,17 +204,52 @@ export async function logoutAction(): Promise<AuthResult> {
  * Sends password reset email to user
  */
 export async function resetPasswordAction(email: string): Promise<AuthResult> {
-  const supabase = await createClient();
+  try {
+    const normalizedEmail = email.toLowerCase();
 
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/auth/confirm?next=/auth/update-password`,
-  });
+    // Find user by email
+    const userResult = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, normalizedEmail))
+      .limit(1);
 
-  if (error) {
-    return { success: false, error: error.message };
+    // Always return success to prevent email enumeration
+    if (userResult.length === 0) {
+      return { success: true };
+    }
+
+    const user = userResult[0];
+
+    // Delete old password reset tokens for this user
+    await db
+      .delete(verificationTokens)
+      .where(
+        and(
+          eq(verificationTokens.user_id, user.id),
+          eq(verificationTokens.type, "password_reset")
+        )
+      );
+
+    // Generate new token
+    const token = generateToken();
+    const expiresAt = new Date(Date.now() + PASSWORD_RESET_TOKEN_EXPIRY);
+
+    await db.insert(verificationTokens).values({
+      user_id: user.id,
+      token,
+      type: "password_reset",
+      expires_at: expiresAt,
+    });
+
+    // Send password reset email
+    await sendPasswordResetEmail(user.email, token, user.full_name || undefined);
+
+    return { success: true };
+  } catch (error) {
+    console.error("Password reset error:", error);
+    return { success: false, error: "An unexpected error occurred" };
   }
-
-  return { success: true };
 }
 
 /**
@@ -139,15 +259,164 @@ export async function resetPasswordAction(email: string): Promise<AuthResult> {
 export async function updatePasswordAction(
   password: string
 ): Promise<AuthResult> {
-  const supabase = await createClient();
+  try {
+    // Get current user from cookie
+    const userId = await getCurrentUserId();
 
-  const { error } = await supabase.auth.updateUser({
-    password,
-  });
+    if (!userId) {
+      return { success: false, error: "Not authenticated" };
+    }
 
-  if (error) {
-    return { success: false, error: error.message };
+    // Hash new password
+    const passwordHash = await hashPassword(password);
+
+    // Update user password
+    await db
+      .update(users)
+      .set({
+        password_hash: passwordHash,
+        updated_at: new Date(),
+      })
+      .where(eq(users.id, userId));
+
+    return { success: true };
+  } catch (error) {
+    console.error("Password update error:", error);
+    return { success: false, error: "An unexpected error occurred" };
   }
+}
 
-  return { success: true };
+/**
+ * Verify email token and mark email as verified
+ */
+export async function verifyEmailToken(token: string): Promise<AuthResult> {
+  try {
+    // Find the token
+    const tokenResult = await db
+      .select()
+      .from(verificationTokens)
+      .where(
+        and(
+          eq(verificationTokens.token, token),
+          eq(verificationTokens.type, "email_verification"),
+          gt(verificationTokens.expires_at, new Date())
+        )
+      )
+      .limit(1);
+
+    if (tokenResult.length === 0) {
+      return { success: false, error: "Invalid or expired verification link" };
+    }
+
+    const verificationToken = tokenResult[0];
+
+    // Update user as verified
+    await db
+      .update(users)
+      .set({
+        email_verified: true,
+        updated_at: new Date(),
+      })
+      .where(eq(users.id, verificationToken.user_id));
+
+    // Delete the verification token
+    await db
+      .delete(verificationTokens)
+      .where(eq(verificationTokens.id, verificationToken.id));
+
+    // Get user data for JWT
+    const userResult = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, verificationToken.user_id))
+      .limit(1);
+
+    if (userResult.length > 0) {
+      const user = userResult[0];
+      // Generate JWT and set cookie
+      const jwtToken = await signJWT({
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+      });
+
+      await setAuthCookie(jwtToken);
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("Email verification error:", error);
+    return { success: false, error: "An unexpected error occurred" };
+  }
+}
+
+/**
+ * Verify password reset token and update password
+ */
+export async function verifyPasswordResetToken(
+  token: string,
+  newPassword: string
+): Promise<AuthResult> {
+  try {
+    // Find the token
+    const tokenResult = await db
+      .select()
+      .from(verificationTokens)
+      .where(
+        and(
+          eq(verificationTokens.token, token),
+          eq(verificationTokens.type, "password_reset"),
+          gt(verificationTokens.expires_at, new Date())
+        )
+      )
+      .limit(1);
+
+    if (tokenResult.length === 0) {
+      return { success: false, error: "Invalid or expired reset link" };
+    }
+
+    const verificationToken = tokenResult[0];
+
+    // Hash new password
+    const passwordHash = await hashPassword(newPassword);
+
+    // Update user password and mark email as verified
+    await db
+      .update(users)
+      .set({
+        password_hash: passwordHash,
+        email_verified: true,
+        updated_at: new Date(),
+      })
+      .where(eq(users.id, verificationToken.user_id));
+
+    // Delete the verification token
+    await db
+      .delete(verificationTokens)
+      .where(eq(verificationTokens.id, verificationToken.id));
+
+    // Get user data for JWT
+    const userResult = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, verificationToken.user_id))
+      .limit(1);
+
+    if (userResult.length > 0) {
+      const user = userResult[0];
+      // Generate JWT and set cookie
+      const jwtToken = await signJWT({
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+      });
+
+      await setAuthCookie(jwtToken);
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("Password reset verification error:", error);
+    return { success: false, error: "An unexpected error occurred" };
+  }
 }

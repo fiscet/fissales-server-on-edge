@@ -1,15 +1,15 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { useState } from 'react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   createCheckoutSession,
-  createCancelSession,
-} from "@/app/actions/subscriptions";
-import { useUsage } from "@/contexts/UsageContext";
-import type { SubscriptionTier } from "@/lib/subscriptions";
-import { cn } from "@/lib/utils";
+  createCancelSession
+} from '@/app/actions/subscriptions';
+import { useUsage } from '@/contexts/UsageContext';
+import type { SubscriptionTier } from '@/lib/subscriptions';
+import { cn } from '@/lib/utils';
 
 interface PlanFeature {
   name: string;
@@ -33,29 +33,32 @@ export function PlanCard({ plan, loading }: PlanCardProps) {
     try {
       await createCancelSession();
     } catch (error) {
-      console.error("Error during cancellation:", error);
+      console.error('Error during cancellation:', error);
       setCheckoutLoading(false);
     }
   };
   const { usageStats } = useUsage();
   const subscriptionTier: SubscriptionTier =
-    (usageStats?.subscriptionTier as SubscriptionTier) || "free";
+    (usageStats?.subscriptionTier as SubscriptionTier) || 'starter';
   const isCurrentPlan =
-    (subscriptionTier === "starter" && plan.name === "Starter") ||
-    (subscriptionTier === "professional" && plan.name === "Professional");
+    (subscriptionTier === 'starter' && plan.name === 'Starter') ||
+    (subscriptionTier === 'professional' && plan.name === 'Professional');
 
-  let conversationsText = "";
+  let conversationsText = '';
   conversationsText = `${plan.conversations.toLocaleString()} AI conversations/month`;
 
-  let productsText = "";
+  let productsText = '';
   productsText = `${plan.products.toLocaleString()} WooCommerce products`;
+
+  const hasPaidSubscription =
+    subscriptionTier === 'starter' || subscriptionTier === 'professional';
 
   const renderActionButton = () => {
     // Free plan - no action needed
-    if (plan.name === "Free") {
+    if (plan.name === 'Free') {
       return null;
     }
-    if (subscriptionTier === "free") {
+    if (!hasPaidSubscription) {
       // Upgrade from free to pro - use server action directly
       return (
         <form action={createCheckoutSession}>
@@ -66,7 +69,7 @@ export function PlanCard({ plan, loading }: PlanCardProps) {
       );
     }
 
-    if (subscriptionTier === "paid") {
+    if (hasPaidSubscription) {
       // Cancel pro subscription - direct portal link
       return (
         <Button
@@ -81,10 +84,10 @@ export function PlanCard({ plan, loading }: PlanCardProps) {
           onClick={handleCancelSubscription}
         >
           {usageStats?.stripeData?.cancelAtPeriodEnd
-            ? "Cancellation Scheduled"
+            ? 'Cancellation Scheduled'
             : checkoutLoading
-              ? "Loading..."
-              : "Cancel"}
+            ? 'Loading...'
+            : 'Cancel'}
         </Button>
       );
     }
@@ -95,10 +98,10 @@ export function PlanCard({ plan, loading }: PlanCardProps) {
   return (
     <div
       className={cn(
-        "rounded-lg px-5 py-4",
+        'rounded-lg px-5 py-4',
         isCurrentPlan
-          ? "ring-2 ring-primary/80 bg-primary/10 dark:bg-primary/20"
-          : "border"
+          ? 'ring-2 ring-primary/80 bg-primary/10 dark:bg-primary/20'
+          : 'border'
       )}
     >
       <div className="space-y-3">

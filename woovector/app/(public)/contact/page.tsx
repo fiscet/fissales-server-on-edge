@@ -1,13 +1,9 @@
-import { ContactForm } from "@/components/contact/ContactForm";
-import { ContactInfoPanel } from "@/components/contact/ContactInfoPanel";
-import { getCurrentUserId } from "@/lib/auth";
-import { getCurrentUserProfile } from "@/lib/supabase/server";
+import { ContactForm } from '@/components/contact/ContactForm';
+import { ContactInfoPanel } from '@/components/contact/ContactInfoPanel';
+import { getCurrentUser } from '@/lib/auth';
 
 export default async function ContactPage() {
-  const userId = await getCurrentUserId();
-  const profile = userId
-    ? await getCurrentUserProfile(userId).catch(() => null)
-    : null;
+  const user = await getCurrentUser();
 
   return (
     <div className="bg-slate-50 dark:bg-slate-950">
@@ -20,14 +16,15 @@ export default async function ContactPage() {
             Need help with WooVector? We’ll get you answers fast.
           </h1>
           <p className="text-lg text-muted-foreground leading-relaxed">
-            Share what’s happening and our team will respond within 24 hours. The more detail you include, the quicker we can resolve it for you.
+            Share what’s happening and our team will respond within 24 hours.
+            The more detail you include, the quicker we can resolve it for you.
           </p>
         </div>
 
         <div className="grid gap-10 lg:grid-cols-[3fr_2fr] lg:gap-12">
           <ContactForm
-            defaultEmail={profile?.email ?? undefined}
-            defaultName={profile?.full_name ?? undefined}
+            defaultEmail={user?.email ?? undefined}
+            defaultName={user?.full_name ?? undefined}
           />
           <ContactInfoPanel />
         </div>
@@ -35,4 +32,3 @@ export default async function ContactPage() {
     </div>
   );
 }
-

@@ -17,7 +17,7 @@ interface MigrationEntry {
   when: number;
 }
 
-function checkDownMigrations(): { total: number; missing: string[] } {
+function checkDownMigrations(): { total: number; missing: string[]; } {
   const migrationsDir = path.join(process.cwd(), "drizzle", "migrations");
   const journalPath = path.join(migrationsDir, "meta", "_journal.json");
 
@@ -66,10 +66,10 @@ async function main() {
     }
   }
 
-  // Create PostgreSQL connection - no SSL since Supabase has SSL disabled
+  // Create PostgreSQL connection - no SSL for local PostgreSQL
   const client = postgres(DATABASE_URL!, {
     prepare: false,
-    ssl: "require",
+    // No SSL for local PostgreSQL
   });
   const db = drizzle(client);
 

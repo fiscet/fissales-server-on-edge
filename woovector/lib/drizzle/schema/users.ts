@@ -1,14 +1,18 @@
-import { pgTable, text, timestamp, uuid, index } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, uuid, index, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import type { InferSelectModel } from "drizzle-orm";
 
-// Users table - for application user data (references auth.users.id)
+// Users table - for application user data with auth fields
 export const users = pgTable(
   "users",
   {
-    id: uuid("id").primaryKey(), // References auth.users.id from Supabase
-    email: text("email").notNull().unique(), // Synced from auth.users
+    id: uuid("id").primaryKey().defaultRandom(), // Auto-generate UUID for new users
+    email: text("email").notNull().unique(),
     full_name: text("full_name"),
+
+    // Authentication fields
+    password_hash: text("password_hash"),
+    email_verified: boolean("email_verified").default(false).notNull(),
 
     // Metadata
     created_at: timestamp("created_at", { withTimezone: true })
@@ -47,4 +51,4 @@ export type UpdateUser = Partial<User>;
 
 // Role-related types
 export type UserRole = "member" | "admin";
-export type AdminUser = User & { role: "admin" };
+export type AdminUser = User & { role: "admin"; };

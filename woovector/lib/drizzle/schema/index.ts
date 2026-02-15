@@ -9,3 +9,4 @@ export * from "./subscription-plans";
 export * from "./vendor-subscriptions";
 export * from "./vendor-stores";
 export * from "./products";
+export * from "./verification-tokens";
