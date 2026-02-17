@@ -1,4 +1,4 @@
-import { createStep } from "@mastra/core";
+import { createStep } from "@mastra/core/workflows";
 import { classifierAgent } from "../agents/classifier-agent";
 import { z } from "zod";
 

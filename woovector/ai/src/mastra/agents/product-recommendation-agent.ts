@@ -21,7 +21,7 @@ export const productRecommendationAgent = new Agent({
     'Product recommendation agent for clothing and fashion that finds products in the catalog and prepares comprehensive recommendations when customer needs are clear and specific',
   model: smartModel,
   // No memory needed for stateless product recommendations
-  defaultGenerateOptions: {
+  defaultGenerateOptionsLegacy: {
     maxSteps: 10, // Allow multiple steps for tool calling and response generation
     temperature: 0.1,
   },

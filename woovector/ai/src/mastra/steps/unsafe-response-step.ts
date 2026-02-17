@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createStep } from "@mastra/core";
+import { createStep } from "@mastra/core/workflows";
 
 export const unsafeResponseStep = createStep({
   id: "unsafe-response-step",

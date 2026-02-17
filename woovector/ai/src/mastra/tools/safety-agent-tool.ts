@@ -11,16 +11,10 @@ export const safetyAgentTool = createTool({
   outputSchema: z.object({
     response: z.string()
   }),
-  execute: async ({ context, runtimeContext }) => {
-    const { message } = context;
+  execute: async (input) => {
+    const { message } = input;
     const result = await safetyAgent.generate(
-      [{ role: 'user', content: message }],
-      {
-        memory: {
-          thread: runtimeContext.get('sessionId')!,
-          resource: runtimeContext.get('userId')!,
-        },
-      }
+      [{ role: 'user', content: message }]
     );
     return {
       response: result.text,

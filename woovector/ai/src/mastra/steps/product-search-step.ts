@@ -1,4 +1,4 @@
-import { createStep } from "@mastra/core";
+import { createStep } from "@mastra/core/workflows";
 import { z } from "zod";
 import { productSearchAgent } from "../agents/product-search-agent";
 
@@ -10,7 +10,7 @@ export const productSearchStep = createStep({
   outputSchema: z.object({
     response: z.string()
   }),
-  execute: async ({ inputData, runtimeContext }) => {
+  execute: async ({ inputData, requestContext }) => {
     console.log('🔵 Product Search Step - Input:', inputData.classification);
 
     // Parse the classification to extract search parameters
@@ -29,7 +29,7 @@ export const productSearchStep = createStep({
 
     const result = await productSearchAgent.generate(
       [{ role: 'user', content: searchInstruction }],
-      { runtimeContext }
+      { requestContext }
     );
 
     console.log('🔵 Product Search Step - Tool calls:', result.toolCalls?.length || 0);

@@ -1,10 +1,10 @@
 import { openai } from '@ai-sdk/openai';
-import { createTool } from '@mastra/core';
+import { createTool } from '@mastra/core/tools';
 import { QdrantVector } from '@mastra/qdrant';
 import { z } from 'zod';
 
-// Initialize Qdrant vector store (cloud)
 const qdrantVectorStore = new QdrantVector({
+  id: 'woovector-store',
   url: process.env.QDRANT_URL,
   apiKey: process.env.QDRANT_API_KEY,
   https: true
@@ -20,9 +20,9 @@ export const searchProductsOnMeta = createTool({
     queryText: z.string().describe('Product name or search term'),
     topK: z.number().optional().default(5).describe('Number of results (max 10)'),
   }),
-  execute: async ({ context }) => {
+  execute: async (input) => {
     try {
-      const { queryText, topK = 5 } = context;
+      const { queryText, topK = 5 } = input;
       const limitedTopK = Math.min(topK, 10);
 
       console.log('🟡 searchProductsOnMeta CALLED:', queryText);
@@ -75,9 +75,9 @@ export const searchSimilarProducts = createTool({
     queryText: z.string().describe('Semantic search query (e.g., "casual summer outfit", "formal wear")'),
     topK: z.number().optional().default(5).describe('Number of results (max 10)'),
   }),
-  execute: async ({ context }) => {
+  execute: async (input) => {
     try {
-      const { queryText, topK = 5 } = context;
+      const { queryText, topK = 5 } = input;
       const limitedTopK = Math.min(topK, 10);
 
       console.log('🟢 searchSimilarProducts CALLED:', queryText);

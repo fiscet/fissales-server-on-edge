@@ -8,5 +8,5 @@ export const offtopicAgent = new Agent({
   description: 'Frontend offtopic agent that speaks with the customer',
   instructions: `You are a frontend agent that handles customer's offtopic and malicious requests explaining him, gently, that this is not the place for that :-)`,
   model: 'google/gemini-2.5-flash-lite',
-  memory: ({ runtimeContext }) => memory(runtimeContext),
+  memory: ({ requestContext }) => memory(requestContext),
 });

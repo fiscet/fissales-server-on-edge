@@ -15,6 +15,6 @@ Your role:
 
 Use pronouns and references to guide the user to what they meant.`,
   model: 'openai/gpt-4.1-nano',
-  memory: ({ runtimeContext }) => memory(runtimeContext),
+  memory: ({ requestContext }) => memory(requestContext),
   tools: { getConversationContext, saveConversationContext },
 });

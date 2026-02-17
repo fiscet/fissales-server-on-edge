@@ -1,4 +1,4 @@
-import { createStep } from "@mastra/core";
+import { createStep } from "@mastra/core/workflows";
 import { safetyAgent } from "../agents/safety-agent";
 import { customerInputSchema } from "../schemas/customer-input-schema";
 import z from "zod";
@@ -9,11 +9,11 @@ export const receiveMessageStep = createStep({
   outputSchema: z.object({
     message: z.string()
   }),
-  execute: async ({ inputData, runtimeContext }) => {
-    runtimeContext.set("sessionId", inputData.session_id);
+  execute: async ({ inputData, requestContext }) => {
+    requestContext.set("sessionId", inputData.session_id);
 
     if (inputData.customer_id) {
-      runtimeContext.set("userId", inputData.customer_id);
+      requestContext.set("userId", inputData.customer_id);
     }
 
     const result = await safetyAgent.generate(

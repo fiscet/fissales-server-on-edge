@@ -1,4 +1,4 @@
-import { createTool } from "@mastra/core";
+import { createTool } from "@mastra/core/tools";
 import z from "zod";
 
 // TODO: Implement the tool to query the company information

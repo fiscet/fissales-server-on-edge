@@ -1,10 +1,9 @@
 import { Memory } from '@mastra/memory';
-import { RuntimeContext } from '@mastra/core/runtime-context';
+import { RequestContext } from '@mastra/core/request-context';
 import { storage } from './storage';
-import { ChatMessage } from '../types';
 
-export const memory = (runtimeContext: RuntimeContext<Pick<ChatMessage, 'userId' | 'sessionId'>>) => {
-  const userId = runtimeContext?.get('userId') || 'anonymous';
+export const memory = (requestContext: RequestContext<unknown>) => {
+  const userId = requestContext?.get('userId') as string || 'anonymous';
   const isAuthenticated = userId !== 'anonymous';
 
   return new Memory({

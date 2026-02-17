@@ -1,4 +1,4 @@
-import { createStep } from "@mastra/core";
+import { createStep } from "@mastra/core/workflows";
 import { z } from "zod";
 import { companyInfoAgent } from "../agents/company-info-agent";
 
@@ -10,10 +10,10 @@ export const companyInfoStep = createStep({
   outputSchema: z.object({
     response: z.string()
   }),
-  execute: async ({ inputData, runtimeContext }) => {
+  execute: async ({ inputData, requestContext }) => {
     const result = await companyInfoAgent.generate(
       [{ role: 'user', content: inputData.classification }],
-      { runtimeContext }
+      { requestContext }
     );
     return { response: result.text };
   },

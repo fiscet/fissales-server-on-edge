@@ -10,7 +10,7 @@ export const productSearchAgent = new Agent({
   name: 'Product Search Agent',
   description: 'Product search agent that finds specific clothing products in the catalog using structured search',
   // No memory needed for stateless product search
-  defaultGenerateOptions: {
+  defaultGenerateOptionsLegacy: {
     maxSteps: 5,
     temperature: 0.1, // More deterministic
   },

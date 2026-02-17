@@ -8,7 +8,7 @@ import { contextAgent } from './agents/context-agent';
 import { productRecommendationAgent } from './agents/product-recommendation-agent';
 import { productSearchAgent } from './agents/product-search-agent';
 import { orchestratorAgent } from './agents/orchestrator-agent';
-import { storage } from './utils/storage'; // Using Upstash (no bundling issues)
+import { storage } from './utils/storage';
 import { ecommerceFlow } from './workflows/ecommerce-flow';
 
 export const mastra = new Mastra({
@@ -29,8 +29,4 @@ export const mastra = new Mastra({
     name: 'WooVector-Mastra',
     level: 'info'
   }),
-  observability: {
-    // Enables DefaultExporter and CloudExporter for AI tracing
-    default: { enabled: true },
-  },
 });
